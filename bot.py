@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = "PASTE_YOUR_TOKEN_HERE"
+BOT_TOKEN = "6343381167:AAErcoKwRG3rB7QpxdmtS0F9JbrV9PYN9mg"
 CHANNEL_LINK = "https://t.me/trusted_Loot_Offers"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
