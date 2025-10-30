@@ -1,72 +1,50 @@
-#!/usr/bin/env python3
-"""
-Casino Loot & Bonus Bot for Telegram
-Simple, robust. Reads offers from offers.json. Health endpoint for Render.
-Set BOT_TOKEN and SUPPORT_LINK in Render environment.
-"""
-
-import os, json, logging, asyncio, threading
-from pathlib import Path
-from flask import Flask, jsonify
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# CONFIG (set these in Render environment variables)
-BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-SUPPORT_LINK = os.getenv("SUPPORT_LINK", "https://t.me/trusted_Loot_Offers")
-OFFERS_FILE = os.getenv("OFFERS_FILE", "offers.json")
-PORT = int(os.getenv("PORT", "5000"))
+BOT_TOKEN = "PASTE_YOUR_TOKEN_HERE"
+CHANNEL_LINK = "https://t.me/trusted_Loot_Offers"
 
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger("casino-bot")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("🎰 Casino Offers", callback_data="casino")],
+        [InlineKeyboardButton("🪙 Rummy Bonus", callback_data="rummy")],
+        [InlineKeyboardButton("🎯 Teen Patti Loot", callback_data="teenpatti")],
+        [InlineKeyboardButton("💵 Free Income", callback_data="income")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("🎁 Choose a category:", reply_markup=reply_markup)
 
-# Flask for healthcheck
-flask_app = Flask(__name__)
-@flask_app.route("/")
-def health():
-    return jsonify({"status": "ok", "service": "Casino Loot & Bonus Bot"})
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
 
-def load_offers():
-    p = Path(OFFERS_FILE)
-    if not p.exists():
-        # if missing, create a default file so bot still runs
-        default = {
-            "main_menu_order": [
-                "🎰 Casino Offers",
-                "🪙 Rummy Bonus",
-                "🎯 Teen Patti Loot",
-                "💵 Free Income",
-                "🎁 Signup Bonus"
-            ],
-            "categories": {}
-        }
-        p.write_text(json.dumps(default, indent=2, ensure_ascii=False))
-        return default
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.exception("Failed to read offers.json: %s", e)
-        return {"main_menu_order": [], "categories": {}}
+    category_links = {
+        "casino": "🎰 Casino Offers:\n1. All lottery site\n2. Yono Game\n3. MostBet",
+        "rummy": "🪙 Rummy Bonus:\n1. Yono Rummy\n2. Ok Rummy",
+        "teenpatti": "🎯 Teen Patti Loot:\n1. BDG Slot",
+        "income": "💵 Free Income:\n1. Task Earning\n2. 500 Spin Tricks"
+    }
 
-OFFERS = load_offers()
+    if query.data in category_links:
+        await query.edit_message_text(
+            text=f"{category_links[query.data]}\n\n👉 Visit Offers: {CHANNEL_LINK}"
+        )
 
-# Telegram handlers
-async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    welcome = (
-        "🎉 Welcome to *Casino Loot & Bonus Zone!* 🇮🇳\n\n"
-        "💸 Get latest casino bonuses, rummy offers & free income tricks.\n\n"
-        "👇 Tap a category to view offers. Play safe!"
-    )
-    order = OFFERS.get("main_menu_order") or list(OFFERS.get("categories", {}).keys())
-    keyboard = [[InlineKeyboardButton(cat, callback_data=f"cat:{cat}")] for cat in order]
-    keyboard.append([InlineKeyboardButton("📢 Join Channel / Support", url=SUPPORT_LINK)])
-    keyboard.append([InlineKeyboardButton("🔄 Reload Offers (admin)", callback_data="admin:reload")])
-    reply = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(welcome, parse_mode="Markdown", reply_markup=reply)
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("help", start))
+app.add_handler(CommandHandler("menu", start))
+app.add_handler(CommandHandler("offers", start))
+app.add_handler(CommandHandler("casino", start))
+app.add_handler(CommandHandler("rummy", start))
+app.add_handler(CommandHandler("teenpatti", start))
+app.add_handler(CommandHandler("income", start))
 
-async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Use /start to open the menu. Contact support via the Join Channel button.")
+from telegram.ext import CallbackQueryHandler
+app.add_handler(CallbackQueryHandler(button_handler))
 
+print("✅ Bot started...")
+app.run_polling()
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
